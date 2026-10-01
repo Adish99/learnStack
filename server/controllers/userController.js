@@ -134,8 +134,58 @@ const changePassword = async (req, res) => {
   }
 };
 
+const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    const { id } = req.params;
+
+    const allowedRoles = ["student", "instructor", "admin"];
+
+    // Validate role
+    if (!role || !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role",
+      });
+    }
+
+    // Find user
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.role = role;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Update role error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  updateUserRole
 };
