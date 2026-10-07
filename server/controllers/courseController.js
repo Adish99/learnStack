@@ -97,8 +97,49 @@ const getCourseById = async (req, res) => {
   }
 };
 
+const publishCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findById(id);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    // Only the instructor who owns the course can publish it
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only publish your own courses",
+      });
+    }
+
+    course.status = "published";
+
+    await course.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Course published successfully",
+      course,
+    });
+  } catch (error) {
+    console.error("Publish course error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   getCourses,
-  getCourseById
+  getCourseById,
+  publishCourse
 };
