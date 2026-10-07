@@ -5,6 +5,7 @@ const connectDB = require("./config/db");
 const authRoutes=require("./routes/authRoutes");
 const userRoutes=require("./routes/userRoutes");
 const courseRoutes=require("./routes/courseRoutes");
+const lessonRoutes=require("./routes/lessonRoutes");
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api", lessonRoutes);
 
 const PORT = process.env.PORT || 5000;
 
