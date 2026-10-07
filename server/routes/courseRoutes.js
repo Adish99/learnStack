@@ -1,6 +1,6 @@
 const express = require("express");
 
-const { createCourse, getCourses, getCourseById, publishCourse } = require("../controllers/courseController");
+const { createCourse, getCourses, getCourseById, publishCourse, updateCourse } = require("../controllers/courseController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
@@ -11,5 +11,6 @@ router.post("/",authMiddleware,roleMiddleware("instructor"),createCourse);
 router.get("/",getCourses);
 router.get("/:id", getCourseById);
 router.patch( "/:id/publish",authMiddleware,roleMiddleware("instructor"),publishCourse);
+router.put("/:id",authMiddleware,roleMiddleware("instructor"),updateCourse);
 
 module.exports = router;
