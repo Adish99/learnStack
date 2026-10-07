@@ -197,9 +197,55 @@ const publishLesson = async (req, res) => {
   }
 };
 
+const deleteLesson = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const lesson = await Lesson.findById(id);
+
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        message: "Lesson not found",
+      });
+    }
+
+    const course = await Course.findById(lesson.course);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own lessons",
+      });
+    }
+
+    await Lesson.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Lesson deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete lesson error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   createLesson,
   getCourseLessons,
   updateLesson,
-  publishLesson
+  publishLesson,
+  deleteLesson
 };
