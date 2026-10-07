@@ -191,10 +191,48 @@ const updateCourse = async (req, res) => {
   }
 };
 
+const deleteCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findById(id);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    // Only course owner can delete it
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own courses",
+      });
+    }
+
+    await Course.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Course deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete course error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   getCourses,
   getCourseById,
   publishCourse,
-  updateCourse
+  updateCourse,
+  deleteCourse
 };
