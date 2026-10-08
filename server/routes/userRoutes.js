@@ -12,6 +12,7 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+//User routes 
 router.get("/profile", authMiddleware, getProfile);
 router.put("/profile", authMiddleware, updateProfile);
 router.put("/change-password",authMiddleware,changePassword);
