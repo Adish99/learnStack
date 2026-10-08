@@ -6,6 +6,7 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+//Authentication Routes
 router.post("/register", registerUser);
 router.post("/login",loginUser);
 
