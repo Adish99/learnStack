@@ -62,6 +62,40 @@ const enrollInCourse = async (req, res) => {
   }
 };
 
+
+const getMyEnrollments = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    const enrollments = await Enrollment.find({
+      student: studentId,
+    })
+      .populate({
+        path: "course",
+        select: "title description thumbnail price category level status instructor",
+        populate: {
+          path: "instructor",
+          select: "name",
+        },
+      })
+      .sort({ enrolledAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: enrollments.length,
+      enrollments,
+    });
+  } catch (error) {
+    console.error("Get my enrollments error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   enrollInCourse,
+  getMyEnrollments
 };
