@@ -1,5 +1,6 @@
 const Lesson = require("../models/Lesson");
 const Course = require("../models/Course");
+const uploadVideo = require("../utils/uploadVideo");
 
 const createLesson = async (req, res) => {
   try {
@@ -242,10 +243,69 @@ const deleteLesson = async (req, res) => {
   }
 };
 
+
+const uploadLessonVideo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a video",
+      });
+    }
+
+    const lesson = await Lesson.findById(id);
+
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        message: "Lesson not found",
+      });
+    }
+
+    const course = await Course.findById(lesson.course);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only upload videos to your own lessons",
+      });
+    }
+
+    const result = await uploadVideo(req.file.buffer);
+
+    lesson.videoUrl = result.secure_url;
+    await lesson.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Lesson video uploaded successfully",
+      videoUrl: lesson.videoUrl,
+      lesson,
+    });
+  } catch (error) {
+    console.error("Upload lesson video error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Video upload failed",
+    });
+  }
+};
+
 module.exports = {
   createLesson,
   getCourseLessons,
   updateLesson,
   publishLesson,
-  deleteLesson
+  deleteLesson,
+  uploadLessonVideo
 };
