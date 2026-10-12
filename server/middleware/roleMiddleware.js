@@ -1,3 +1,4 @@
+//Role Middleware for different role like student, module teacher and admin
 const roleMiddleware = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
