@@ -1,5 +1,6 @@
 const Lesson = require("../models/Lesson");
 const Course = require("../models/Course");
+const Enrollment = require("../models/Enrollment");
 const uploadVideo = require("../utils/uploadVideo");
 
 const createLesson = async (req, res) => {
@@ -54,17 +55,48 @@ const createLesson = async (req, res) => {
   }
 };
 
+
 const getCourseLessons = async (req, res) => {
   try {
     const { courseId } = req.params;
 
-    const course = await Course.findById(courseId);
+    const course = await Course.findOne({
+      _id: courseId,
+      status: "published",
+    });
 
     if (!course) {
       return res.status(404).json({
         success: false,
-        message: "Course not found",
+        message: "Published course not found",
       });
+    }
+
+    // Allow the instructor who owns the course
+    const isOwner =
+      course.instructor.toString() === req.user?.id;
+
+    // Otherwise, require a completed enrollment
+    if (!isOwner) {
+      if (!req.user || req.user.role !== "student") {
+        return res.status(403).json({
+          success: false,
+          message: "You must enroll to access these lessons",
+        });
+      }
+
+      const enrollment = await Enrollment.findOne({
+        student: req.user.id,
+        course: courseId,
+        paymentStatus: "completed",
+      });
+
+      if (!enrollment) {
+        return res.status(403).json({
+          success: false,
+          message: "You must enroll to access these lessons",
+        });
+      }
     }
 
     const lessons = await Lesson.find({
