@@ -1,6 +1,7 @@
 
 const mongoose = require("mongoose");
 
+//EnrollmentSchema
 const enrollmentSchema = new mongoose.Schema(
   {
     student: {
