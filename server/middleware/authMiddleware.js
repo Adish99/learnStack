@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 
+//Authentication Middleware for learnStack
 const authMiddleware = (req, res, next) => {
   try {
     // Get authorization header
