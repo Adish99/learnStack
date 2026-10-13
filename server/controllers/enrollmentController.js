@@ -249,9 +249,206 @@ const getCourseProgress = async (req, res) => {
   }
 };
 
+
+
+const getStudentDashboard = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Get the student's enrolled courses
+    const enrollments = await Enrollment.find({
+      student: studentId,
+      paymentStatus: "completed",
+    })
+      .populate({
+        path: "course",
+        select: "title description thumbnail price category level instructor",
+        populate: {
+          path: "instructor",
+          select: "name",
+        },
+      })
+      .sort({ enrolledAt: -1 });
+
+    const totalCourses = enrollments.length;
+
+    // Calculate accurate progress for each enrolled course
+    const progressData = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const courseId = enrollment.course?._id;
+
+        // Handle courses that may have been deleted
+        if (!courseId) {
+          return {
+            progress: 0,
+            completedLessons: 0,
+            isCompleted: false,
+          };
+        }
+
+        // Get currently published lessons
+        const publishedLessons = await Lesson.find({
+          course: courseId,
+          isPublished: true,
+        }).select("_id");
+
+        const publishedLessonIds = new Set(
+          publishedLessons.map((lesson) => lesson._id.toString())
+        );
+
+        // Count only completed lessons that are still published
+        const completedLessons = enrollment.completedLessons.filter(
+          (lessonId) => publishedLessonIds.has(lessonId.toString())
+        ).length;
+
+        const totalLessons = publishedLessons.length;
+
+        const progress =
+          totalLessons > 0
+            ? Math.round((completedLessons / totalLessons) * 100)
+            : 0;
+
+        const isCompleted =
+          totalLessons > 0 && completedLessons === totalLessons;
+
+        // Keep the enrollment's stored progress up to date
+        enrollment.progress = progress;
+        enrollment.completedAt = isCompleted
+          ? enrollment.completedAt || new Date()
+          : null;
+
+        await enrollment.save();
+
+        return {
+          progress,
+          completedLessons,
+          isCompleted,
+        };
+      })
+    );
+
+    // Calculate overall dashboard statistics
+    const completedCourses = progressData.filter(
+      (item) => item.isCompleted
+    ).length;
+
+    const totalCompletedLessons = progressData.reduce(
+      (total, item) => total + item.completedLessons,
+      0
+    );
+
+    const averageProgress =
+      totalCourses > 0
+        ? Math.round(
+            progressData.reduce(
+              (total, item) => total + item.progress,
+              0
+            ) / totalCourses
+          )
+        : 0;
+
+    
+return res.status(200).json({
+  success: true,
+  statistics: {
+    totalCourses,
+    completedCourses,
+    totalCompletedLessons,
+    averageProgress,
+  },
+  courses: enrollments.map((enrollment, index) => ({
+    ...enrollment.toObject(),
+    progress: progressData[index].progress,
+    completedLessons: progressData[index].completedLessons,
+    isCompleted: progressData[index].isCompleted,
+  })),
+});
+  } catch (error) {
+    console.error("Get student dashboard error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+
+const getEnrolledCourseDetails = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user.id;
+
+    // Verify the student is enrolled
+    const enrollment = await Enrollment.findOne({
+      student: studentId,
+      course: courseId,
+      paymentStatus: "completed",
+    }).populate({
+      path: "course",
+      select: "title description thumbnail price category level instructor",
+      populate: {
+        path: "instructor",
+        select: "name",
+      },
+    });
+
+    if (!enrollment || !enrollment.course) {
+      return res.status(404).json({
+        success: false,
+        message: "Enrolled course not found",
+      });
+    }
+
+    // Get published lessons
+    const lessons = await Lesson.find({
+      course: courseId,
+      isPublished: true,
+    })
+      .select("title description videoUrl duration order")
+      .sort({ order: 1 });
+
+    const completedLessonIds = new Set(
+      enrollment.completedLessons.map((id) => id.toString())
+    );
+
+    const completedLessons = lessons.filter((lesson) =>
+      completedLessonIds.has(lesson._id.toString())
+    ).length;
+
+    const totalLessons = lessons.length;
+
+    const progress =
+      totalLessons > 0
+        ? Math.round((completedLessons / totalLessons) * 100)
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      course: enrollment.course,
+      lessons,
+      progress: {
+        totalLessons,
+        completedLessons,
+        percentage: progress,
+        isCompleted: totalLessons > 0 && completedLessons === totalLessons,
+      },
+    });
+  } catch (error) {
+    console.error("Get enrolled course details error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyEnrollments,
   completeLesson,
-  getCourseProgress
+  getCourseProgress,
+  getStudentDashboard,
+  getEnrolledCourseDetails
 };
