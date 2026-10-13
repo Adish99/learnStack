@@ -173,8 +173,67 @@ const completeLesson = async (req, res) => {
   }
 };
 
+
+const getCourseProgress = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user.id;
+
+    const enrollment = await Enrollment.findOne({
+      student: studentId,
+      course: courseId,
+      paymentStatus: "completed",
+    }).populate("course", "title");
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: "Enrollment not found",
+      });
+    }
+
+    const totalLessons = await Lesson.countDocuments({
+      course: courseId,
+      isPublished: true,
+    });
+
+    const completedCount = enrollment.completedLessons.length;
+
+    // Recalculate progress in case published lessons have changed
+    const progress =
+      totalLessons > 0
+        ? Math.round((completedCount / totalLessons) * 100)
+        : 0;
+
+    enrollment.progress = progress;
+    enrollment.completedAt =
+      totalLessons > 0 && completedCount >= totalLessons
+        ? enrollment.completedAt || new Date()
+        : null;
+
+    await enrollment.save();
+
+    res.status(200).json({
+      success: true,
+      course: enrollment.course.title,
+      totalLessons,
+      completedLessons: completedCount,
+      progress,
+      isCompleted: totalLessons > 0 && completedCount >= totalLessons,
+    });
+  } catch (error) {
+    console.error("Get course progress error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyEnrollments,
-  completeLesson
+  completeLesson,
+  getCourseProgress
 };
