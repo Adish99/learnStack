@@ -7,6 +7,7 @@ const userRoutes=require("./routes/userRoutes");
 const courseRoutes=require("./routes/courseRoutes");
 const lessonRoutes=require("./routes/lessonRoutes");
 const enrollmentRoutes=require("./routes/enrollmentRoutes");
+const reviewRoutes=require("./routes/reviewRoutes");
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api", lessonRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 const PORT = process.env.PORT || 5000;
 
