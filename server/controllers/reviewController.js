@@ -143,7 +143,110 @@ const getCourseReviews = async (req, res) => {
   }
 };
 
+
+const updateReview = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user.id;
+    const { rating, comment } = req.body;
+
+    // Validate rating if provided
+    if (
+      rating !== undefined &&
+      (!Number.isInteger(Number(rating)) ||
+        Number(rating) < 1 ||
+        Number(rating) > 5)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be a whole number from 1 to 5",
+      });
+    }
+
+    // Find the student's review for this course
+    const review = await Review.findOne({
+      student: studentId,
+      course: courseId,
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+
+    // Update only the fields provided
+    if (rating !== undefined) {
+      review.rating = Number(rating);
+    }
+
+    if (comment !== undefined) {
+      if (typeof comment !== "string" || comment.length > 1000) {
+        return res.status(400).json({
+          success: false,
+          message: "Comment must be a string of at most 1000 characters",
+        });
+      }
+
+      review.comment = comment.trim();
+    }
+
+    await review.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Review updated successfully",
+      review,
+    });
+  } catch (error) {
+    console.error("Update review error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+
+const deleteReview = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user.id;
+
+    // Find the review belonging to this student and course
+    const review = await Review.findOne({
+      student: studentId,
+      course: courseId,
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+
+    await review.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete review error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   createReview,
-  getCourseReviews
+  getCourseReviews,
+  updateReview,
+  deleteReview
 };
