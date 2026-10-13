@@ -4,6 +4,7 @@ const express = require("express");
 const {
   enrollInCourse,
   getMyEnrollments,
+  completeLesson,
 } = require("../controllers/enrollmentController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -14,5 +15,6 @@ const router = express.Router();
 // Enroll the logged-in student in a course
 router.post("/:courseId",authMiddleware,roleMiddleware("student"),enrollInCourse);
 router.get("/my-courses",authMiddleware,roleMiddleware("student"),getMyEnrollments);
+router.patch("/:courseId/lessons/:lessonId/complete",authMiddleware,roleMiddleware("student"),completeLesson);
 
 module.exports = router;
