@@ -192,39 +192,57 @@ const getCourseProgress = async (req, res) => {
       });
     }
 
-    const totalLessons = await Lesson.countDocuments({
+    // Get all currently published lessons
+    const publishedLessons = await Lesson.find({
       course: courseId,
       isPublished: true,
-    });
+    }).select("_id");
 
-    const completedCount = enrollment.completedLessons.length;
+    const totalLessons = publishedLessons.length;
 
-    // Recalculate progress in case published lessons have changed
+    // Store published lesson IDs for efficient lookup
+    const publishedLessonIds = new Set(
+      publishedLessons.map((lesson) => lesson._id.toString())
+    );
+
+    // Count only completed lessons that are still published
+    const completedCount = enrollment.completedLessons.filter(
+      (lessonId) => publishedLessonIds.has(lessonId.toString())
+    ).length;
+
+    // Calculate progress percentage
     const progress =
       totalLessons > 0
         ? Math.round((completedCount / totalLessons) * 100)
         : 0;
 
+    const isCompleted =
+      totalLessons > 0 && completedCount === totalLessons;
+
+    // Update enrollment progress and completion date
     enrollment.progress = progress;
-    enrollment.completedAt =
-      totalLessons > 0 && completedCount >= totalLessons
-        ? enrollment.completedAt || new Date()
-        : null;
+
+    if (isCompleted) {
+      enrollment.completedAt =
+        enrollment.completedAt || new Date();
+    } else {
+      enrollment.completedAt = null;
+    }
 
     await enrollment.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       course: enrollment.course.title,
       totalLessons,
       completedLessons: completedCount,
       progress,
-      isCompleted: totalLessons > 0 && completedCount >= totalLessons,
+      isCompleted,
     });
   } catch (error) {
     console.error("Get course progress error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Server error",
     });
